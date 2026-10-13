@@ -45,9 +45,12 @@ impl fmt::Display for Utf8CStr {
 }
 
 impl Utf8CStr {
-    /// To use in const methods.
-    const fn as_c_str(&self) -> &CStr {
-        unsafe { transmute(self) }
+    pub const fn as_str(&self) -> &str {
+        unsafe { transmute(self.inner.to_bytes()) }
+    }
+
+    pub const fn as_c_str(&self) -> &CStr {
+        &self.inner
     }
 
     /// Construct a `Utf8CStr` with no checking.
@@ -130,7 +133,7 @@ impl Utf8CStr {
 
 impl AsRef<str> for Utf8CStr {
     fn as_ref(&self) -> &str {
-        unsafe { transmute(self.inner.to_bytes()) }
+        self.as_str()
     }
 }
 
