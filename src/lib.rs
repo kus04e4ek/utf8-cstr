@@ -147,6 +147,23 @@ impl Deref for Utf8CStr {
     }
 }
 
+#[macro_export]
+macro_rules! uc {
+    ($str:literal) => {
+        const {
+            let str = concat!($str, '\0');
+            let c_str = match std::ffi::CStr::from_bytes_with_nul(str.as_bytes()) {
+                Ok(s) => s,
+                Err(_) => panic!("String contains nul-byte"),
+            };
+            match Utf8CStr::from_cstr(c_str) {
+                Ok(s) => s,
+                Err(_) => panic!("String is not UTF-8"),
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::Utf8CStr;
@@ -169,6 +186,7 @@ mod tests {
 
         println!("{:?}", x);
         println!("{}", x);
+        println!("{}", uc!("a"));
 
         assert_eq!(x, x);
         assert!(x != Utf8CStr::from_bytes(b"hell\0").unwrap());
