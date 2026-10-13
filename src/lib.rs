@@ -45,6 +45,11 @@ impl fmt::Display for Utf8CStr {
 }
 
 impl Utf8CStr {
+    /// To use in const methods.
+    const fn as_c_str(&self) -> &CStr {
+        unsafe { transmute(self) }
+    }
+
     /// Construct a `Utf8CStr` with no checking.
     ///
     /// Unsafety:
@@ -53,7 +58,7 @@ impl Utf8CStr {
     ///  - `v` must be nul terminated
     ///  - `v` must be utf-8 encoded (for use in `&str`)
     ///  - `l` must be the length of `v` including the nul terminator
-    pub unsafe fn from_raw_parts<'a>(v: *const c_char, l: usize) -> &'a Self {
+    pub const unsafe fn from_raw_parts<'a>(v: *const c_char, l: usize) -> &'a Self {
         Self::from_bytes_with_nul_unchecked(slice::from_raw_parts(v as *const u8, l))
     }
 
@@ -67,7 +72,7 @@ impl Utf8CStr {
     ///  - `'a` must be the correct lifetime
     ///  - `v` must be nul terminated
     ///  - `v` must be utf-8 encoded (for use in `&str`)
-    pub unsafe fn from_ptr_unchecked<'a>(v: *const c_char) -> &'a Self {
+    pub const unsafe fn from_ptr_unchecked<'a>(v: *const c_char) -> &'a Self {
         Self::from_cstr_unchecked(CStr::from_ptr(v))
     }
 
@@ -76,9 +81,12 @@ impl Utf8CStr {
     /// Verifies that the CStr is utf8 encoded.
     ///
     /// NOTE: Only handles non-mutable variants. We may want to accept &mut as well in the future.
-    pub fn from_cstr(v: &CStr) -> Result<&Self, Utf8Error> {
-        v.to_str()?;
-        Ok(unsafe { transmute(v) })
+    pub const fn from_cstr(v: &CStr) -> Result<&Self, Utf8Error> {
+        if let Err(e) = v.to_str() {
+            Err(e)
+        } else {
+            Ok(unsafe { transmute(v) })
+        }
     }
 
     /// Convert from a `&CStr` without any checking
@@ -86,7 +94,7 @@ impl Utf8CStr {
     /// Unsafety:
     ///
     ///  - `v` must be valid utf8 for use in a `&str`
-    pub unsafe fn from_cstr_unchecked(v: &CStr) -> &Utf8CStr {
+    pub const unsafe fn from_cstr_unchecked(v: &CStr) -> &Utf8CStr {
         Self::from_bytes_with_nul_unchecked(v.to_bytes_with_nul())
     }
 
@@ -110,12 +118,12 @@ impl Utf8CStr {
     }
 
     /// Raw convertion from basic data type with no checking.
-    pub unsafe fn from_bytes_with_nul_unchecked(b: &[u8]) -> &Self {
+    pub const unsafe fn from_bytes_with_nul_unchecked(b: &[u8]) -> &Self {
         transmute(CStr::from_bytes_with_nul_unchecked(b))
     }
 
-    pub fn as_ptr(&self) -> *const c_char {
-        let v: &CStr = self.as_ref();
+    pub const fn as_ptr(&self) -> *const c_char {
+        let v: &CStr = self.as_c_str();
         v.as_ptr()
     }
 }
@@ -128,7 +136,7 @@ impl AsRef<str> for Utf8CStr {
 
 impl AsRef<CStr> for Utf8CStr {
     fn as_ref(&self) -> &CStr {
-        unsafe { transmute(self) }
+        self.as_c_str()
     }
 }
 
