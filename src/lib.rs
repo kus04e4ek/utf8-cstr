@@ -2,21 +2,20 @@
 #[macro_use]
 extern crate assert_matches;
 
-use std::ffi::CStr;
-use std::str::Utf8Error;
 use std::convert::AsRef;
-use std::mem::transmute;
-use std::os::raw::c_char;
-use std::ops::Deref;
+use std::ffi::CStr;
 use std::fmt;
+use std::mem::transmute;
+use std::ops::Deref;
+use std::os::raw::c_char;
 use std::slice;
-
+use std::str::Utf8Error;
 
 #[derive(Debug)]
 pub enum Utf8CStrError {
     NoNulTerm,
     EmbeddedNulTerm(usize),
-    Utf8Error(Utf8Error)
+    Utf8Error(Utf8Error),
 }
 
 /**
@@ -33,14 +32,14 @@ pub struct Utf8CStr {
 
 impl fmt::Debug for Utf8CStr {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let s : &str = self.as_ref();
+        let s: &str = self.as_ref();
         write!(fmt, "{:?}", s)
     }
 }
 
 impl fmt::Display for Utf8CStr {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        let s : &str = self.as_ref();
+        let s: &str = self.as_ref();
         write!(fmt, "{}", s)
     }
 }
@@ -79,7 +78,7 @@ impl Utf8CStr {
     /// NOTE: Only handles non-mutable variants. We may want to accept &mut as well in the future.
     pub fn from_cstr(v: &CStr) -> Result<&Self, Utf8Error> {
         v.to_str()?;
-        Ok(unsafe { transmute(v)})
+        Ok(unsafe { transmute(v) })
     }
 
     /// Convert from a `&CStr` without any checking
@@ -116,10 +115,9 @@ impl Utf8CStr {
     }
 
     pub fn as_ptr(&self) -> *const c_char {
-        let v : &CStr = self.as_ref();
+        let v: &CStr = self.as_ref();
         v.as_ptr()
     }
-
 }
 
 impl AsRef<str> for Utf8CStr {
@@ -148,10 +146,18 @@ mod tests {
     #[test]
     fn it_works() {
         let x = Utf8CStr::from_bytes(b"hello\0").unwrap();
-        assert_matches!(Utf8CStr::from_bytes(b"hell").err().unwrap(), Utf8CStrError::NoNulTerm);
-        assert_matches!(Utf8CStr::from_bytes(b"hell\0d").err().unwrap(), Utf8CStrError::EmbeddedNulTerm(4));
-        assert_matches!(Utf8CStr::from_bytes(&[8,1,23,4,0xff, 0]).err().unwrap(), Utf8CStrError::Utf8Error(_));
-
+        assert_matches!(
+            Utf8CStr::from_bytes(b"hell").err().unwrap(),
+            Utf8CStrError::NoNulTerm
+        );
+        assert_matches!(
+            Utf8CStr::from_bytes(b"hell\0d").err().unwrap(),
+            Utf8CStrError::EmbeddedNulTerm(4)
+        );
+        assert_matches!(
+            Utf8CStr::from_bytes(&[8, 1, 23, 4, 0xff, 0]).err().unwrap(),
+            Utf8CStrError::Utf8Error(_)
+        );
 
         println!("{:?}", x);
         println!("{}", x);
